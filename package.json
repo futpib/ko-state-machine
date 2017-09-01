@@ -1,0 +1,26 @@
+{
+  "name": "ko-state-machine",
+  "version": "1.0.0",
+  "description": "Knockout state machine",
+  "main": "index.js",
+  "scripts": {
+    "test": "xo && ava"
+  },
+  "author": "futpib <futpib@gmail.com>",
+  "license": "MIT OR GPL-3.0+",
+  "peerDependencies": {
+    "knockout": "*"
+  },
+  "devDependencies": {
+    "ava": "^0.22.0",
+    "bluebird": "^3.5.0",
+    "coveralls": "^2.13.1",
+    "knockout": "^3.4.2",
+    "nyc": "^11.1.0",
+    "sinon": "^3.2.1",
+    "xo": "^0.18.2"
+  },
+  "dependencies": {
+    "es6-error": "^4.0.2"
+  }
+}
