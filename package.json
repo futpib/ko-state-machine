@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "Knockout state machine",
   "main": "index.js",
+  "browser": "browser.js",
   "scripts": {
-    "test": "xo && nyc ava"
+    "test": "xo && nyc ava",
+    "build": "webpack",
+    "prepublish": "npm run build"
   },
   "author": "futpib <futpib@gmail.com>",
   "license": "MIT OR GPL-3.0+",
@@ -13,11 +16,15 @@
   },
   "devDependencies": {
     "ava": "^0.22.0",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.0",
     "bluebird": "^3.5.0",
     "coveralls": "^2.13.1",
     "knockout": "^3.4.2",
     "nyc": "^11.1.0",
     "sinon": "^3.2.1",
+    "webpack": "^3.5.5",
     "xo": "^0.18.2"
   },
   "dependencies": {
