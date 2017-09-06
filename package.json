@@ -21,6 +21,7 @@
     "xo": "^0.18.2"
   },
   "dependencies": {
-    "es6-error": "^4.0.2"
+    "es6-error": "^4.0.2",
+    "lodash": "^4.17.4"
   }
 }

@@ -1,3 +1,6 @@
+/* eslint-disable unicorn/custom-error-definition */
+
+const _ = require('lodash');
 
 const ko = require('knockout');
 
@@ -15,20 +18,28 @@ class StateMachineError extends Error {
 
 class InvalidOptionsError extends StateMachineError {}
 
-class ConcurrentTransitioningError extends StateMachineError {}
+class ConcurrentTransitionError extends StateMachineError {}
 
 class UnreachableStateError extends StateMachineError {}
 
 class UnknownStateError extends UnreachableStateError {}
 
-class NoTransitionsError extends UnreachableStateError {}
+class UnknownArrowError extends UnreachableStateError {}
+
+class NoArrowsError extends UnreachableStateError {}
+
+class ArrowNotAvailableError extends NoArrowsError {}
 
 class StateMachine {
 	constructor(options) {
 		options = Object.assign({}, options);
 
-		if (!options.states || !options.states.length) {
+		if (!options.states || _.isEmpty(options.states)) {
 			throw new InvalidOptionsError('`states` options is required');
+		}
+
+		if (!options.arrows || _.isEmpty(options.arrows)) {
+			throw new InvalidOptionsError('`arrows` options is required');
 		}
 
 		if (!options.initial) {
@@ -47,11 +58,12 @@ class StateMachine {
 		}
 
 		this._states = options.states;
+		this._arrows = options.arrows;
 		this._initial = options.initial;
 		this._transitions = options.transitions;
 
 		this._state = ko.observable(this._initial);
-		this._transitioning = ko.observable(null);
+		this._currentTransition = ko.observable(null);
 	}
 
 	state() {
@@ -59,95 +71,162 @@ class StateMachine {
 	}
 
 	isBusy() {
-		return Boolean(this._transitioning());
+		return Boolean(this._currentTransition());
 	}
 
-	_evaluateTransition(transition, ...args) {
-		if (transition === true) {
+	_evaluateArrow(arrow, ...args) {
+		if (arrow === true) {
 			return;
 		}
 
-		if (typeof transition === 'function') {
-			return transition(...args);
+		if (typeof arrow === 'function') {
+			return arrow(...args);
 		}
 
-		throw new TypeError('Expected transition function or `true`, instead got ' + transition);
+		if (typeof arrow === 'object') {
+			return arrow.transition(...args);
+		}
+
+		throw new TypeError('Expected transition function, `{transition}` or `true`, instead got ' + arrow);
 	}
 
-	go(target, ...args) {
-		if (!this._states.includes(target)) {
+	_dryGo(targetArrow, targetState, callback, ...args) {
+		if (!this._states.includes(targetState)) {
 			throw new UnknownStateError([
 				'Can\'t go to unknown state `',
-				target,
+				targetState,
 				'`'
 			], {
-				target,
+				targetState,
 				states: this._states
 			});
 		}
 
-		const transitioning = this._transitioning();
-		if (transitioning) {
-			throw new ConcurrentTransitioningError([
-				'Attempted transition to `',
-				target,
+		if (!this._arrows.includes(targetArrow)) {
+			throw new UnknownArrowError([
+				'Can\'t perform transition via unknown arrow `',
+				targetArrow,
+				'`'
+			], {
+				targetArrow,
+				arrows: this._arrows
+			});
+		}
+
+		const currentTransition = this._currentTransition();
+		if (currentTransition) {
+			const {
+				targetArrow: currentTargetArrow, targetState: currentTargetState
+			} = currentTransition;
+
+			throw new ConcurrentTransitionError([
+				'Attempted transition to`',
+				targetState,
+				'` via `',
+				targetArrow,
 				'` while already transitioning to`',
-				transitioning,
+				currentTargetState,
+				'` via `',
+				currentTargetArrow,
 				'`'
 			], {
-				target,
-				transitioning
+				targetState,
+				targetArrow,
+				currentTargetArrow,
+				currentTargetState
 			});
 		}
 
-		const state = this._state();
-		const availableTransitions = this._transitions[state];
-		const transition = availableTransitions && availableTransitions[target];
+		const currentState = this._state();
+		const definedTargetStates = this._transitions[currentState];
 
-		if (!transition) {
-			throw new NoTransitionsError([
-				'No transitions defined from`',
-				state,
+		if (!definedTargetStates || _.isEmpty(definedTargetStates)) {
+			throw new NoArrowsError([
+				'No states are defined to be reachable from`',
+				currentState,
+				'`'
+			], {
+				currentState
+			});
+		}
+
+		const definedArrows = definedTargetStates && definedTargetStates[targetState];
+
+		if (!definedArrows || _.isEmpty(definedArrows)) {
+			throw new NoArrowsError([
+				'No arrows defined from`',
+				currentState,
 				'` to `',
-				target,
+				targetState,
 				'`'
 			], {
-				target,
-				state,
-				availableTransitions
+				targetState,
+				currentState
 			});
 		}
 
-		this._transitioning(target);
-		let transitionResult;
-		let transitionResultIsThenable;
-		let transitionError;
+		const arrow = definedArrows && definedArrows[targetArrow];
 
+		const isAvailable = !arrow.available || arrow.available(...args);
+		if (!isAvailable) {
+			throw new ArrowNotAvailableError('Arrow was not available', {
+				arrow
+			});
+		}
+
+		return callback(targetArrow, targetState, arrow, ...args);
+	}
+
+	canGo(targetArrow, targetState, ...canGoArgs) {
 		try {
-			transitionResult = this._evaluateTransition(transition, ...args);
-			transitionResultIsThenable = transitionResult && typeof transitionResult.then === 'function';
+			return this._dryGo(targetArrow, targetState, (targetArrow, targetState, arrow) => {
+				return Boolean(arrow);
+			}, ...canGoArgs);
 		} catch (err) {
-			transitionError = err;
-		}
-
-		const resolved = ret => {
-			this._state(target);
-			this._transitioning(null);
-			return ret;
-		};
-
-		const rejected = err => {
-			this._transitioning(null);
+			if (err instanceof ArrowNotAvailableError) {
+				return false;
+			}
 			throw err;
-		};
-
-		if (transitionResultIsThenable) {
-			return transitionResult.then(resolved, rejected);
-		} else if (transitionError) {
-			rejected(transitionError);
-		} else {
-			return resolved(transitionResult);
 		}
+	}
+
+	go(targetArrow, targetState, ...goArgs) {
+		return this._dryGo(targetArrow, targetState, (targetArrow, targetState, arrow, ...args) => {
+			this._currentTransition({
+				targetState,
+				targetArrow
+			});
+
+			let transitionResult;
+			let transitionResultIsThenable;
+			let transitionError;
+
+			try {
+				transitionResult = this._evaluateArrow(arrow, ...args);
+				transitionResultIsThenable = transitionResult && typeof transitionResult.then === 'function';
+			} catch (err) {
+				transitionError = err;
+			}
+
+			const resolved = ret => {
+				this._state(targetState);
+				this._currentTransition(null);
+				return ret;
+			};
+
+			const rejected = err => {
+				this._currentTransition(null);
+				throw err;
+			};
+
+			if (transitionResultIsThenable) {
+				return transitionResult.then(resolved, rejected);
+			} else if (transitionError) {
+				rejected(transitionError);
+			} else {
+				return resolved(transitionResult);
+			}
+		}, ...goArgs);
 	}
 }
 
@@ -155,8 +234,12 @@ module.exports = {
 	StateMachine,
 
 	StateMachineError,
-	ConcurrentTransitioningError,
+
+	InvalidOptionsError,
+	ConcurrentTransitionError,
 	UnreachableStateError,
 	UnknownStateError,
-	NoTransitionsError
+	UnknownArrowError,
+	NoArrowsError,
+	ArrowNotAvailableError
 };
