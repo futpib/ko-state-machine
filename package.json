@@ -1,6 +1,6 @@
 {
   "name": "ko-state-machine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Knockout state machine",
   "main": "index.js",
   "browser": "browser.js",
