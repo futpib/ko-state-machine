@@ -16,6 +16,18 @@ import {
 	ArrowNotAvailableError
 } from '.';
 
+const validOptions = {
+	states: ['a', 'b'],
+	arrows: ['ab'],
+	transitions: {
+		a: {
+			b: {
+				ab: true
+			}
+		}
+	}
+};
+
 test('[a -> b] sync noop transitioning', t => {
 	const s = new StateMachine({
 		states: [
@@ -240,10 +252,6 @@ test('arrow availability', t => {
 	t.false(s.isBusy());
 });
 
-test('no states', t => {
-	t.throws(() => new StateMachine(), InvalidOptionsError);
-});
-
 test('error on unknown transition', t => {
 	const s = new StateMachine({
 		states: ['a'],
@@ -318,13 +326,45 @@ test('explicit initial state', t => {
 	t.is(s.isBusy(), false);
 });
 
-test('unknown state referenced in transitions', t => {
-	t.throws(() => new StateMachine({
-		states: ['a'],
+test('no options', t => {
+	t.throws(() => new StateMachine(), InvalidOptionsError);
+});
+
+test('valid options', t => {
+	t.notThrows(() => new StateMachine(validOptions));
+});
+
+test('no states', t => {
+	t.throws(() => new StateMachine(_.omit(validOptions, 'states')), InvalidOptionsError);
+});
+
+test('no arrows', t => {
+	t.throws(() => new StateMachine(_.omit(validOptions, 'arrows')), InvalidOptionsError);
+});
+
+test('no transitions', t => {
+	t.throws(() => new StateMachine(_.omit(validOptions, 'transitions')), InvalidOptionsError);
+});
+
+test('unknown initial', t => {
+	t.throws(() => new StateMachine(_.defaults({
+		initial: 'foo'
+	}, validOptions)), UnknownStateError);
+});
+
+test('invalid arrow', t => {
+	const s = new StateMachine({
+		states: ['a', 'b'],
+		arrows: ['ba'],
+		initial: 'b',
 		transitions: {
-			a: {
-				b: true
+			b: {
+				a: {
+					ba: {}
+				}
 			}
 		}
-	}), InvalidOptionsError);
+	});
+
+	t.throws(() => s.go('ba', 'a'), TypeError);
 });
