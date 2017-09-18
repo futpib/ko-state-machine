@@ -186,6 +186,9 @@ class StateMachine {
 			if (err instanceof ArrowNotAvailableError) {
 				return false;
 			}
+			if (err instanceof ConcurrentTransitionError) {
+				return false;
+			}
 			throw err;
 		}
 	}

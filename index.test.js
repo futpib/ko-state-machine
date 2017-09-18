@@ -368,3 +368,32 @@ test('invalid arrow', t => {
 
 	t.throws(() => s.go('ba', 'a'), TypeError);
 });
+
+test('`canGo` while transitioning', t => {
+	const forever = new Promise(_.noop);
+
+	const s = new StateMachine({
+		states: ['a'],
+		arrows: ['aa'],
+		transitions: {
+			a: {
+				a: {
+					aa: () => forever
+				}
+			}
+		}
+	});
+
+	t.is(s.state(), 'a');
+	t.is(s.isBusy(), false);
+
+	s.go('aa', 'a');
+
+	t.is(s.state(), 'a');
+	t.is(s.isBusy(), true);
+
+	t.false(s.canGo('aa', 'a'));
+
+	t.is(s.state(), 'a');
+	t.is(s.isBusy(), true);
+});
