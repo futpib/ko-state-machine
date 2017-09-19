@@ -447,7 +447,7 @@ test('`canGo` exhaustive', t => {
 				c: {
 					arrow: {
 						available: () => false,
-						transition: () => {},
+						transition: () => {}
 					}
 				}
 			}
