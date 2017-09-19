@@ -189,6 +189,9 @@ class StateMachine {
 			if (err instanceof ConcurrentTransitionError) {
 				return false;
 			}
+			if (err instanceof NoArrowsError) {
+				return false;
+			}
 			throw err;
 		}
 	}

@@ -369,6 +369,38 @@ test('invalid arrow', t => {
 	t.throws(() => s.go('ba', 'a'), TypeError);
 });
 
+test('`canGo` no target states', t => {
+	const s = new StateMachine({
+		states: [
+			's',
+			'a'
+		],
+		arrows: ['arrow'],
+		transitions: {
+			s: {}
+		}
+	});
+
+	t.false(s.canGo('arrow', 'a'));
+});
+
+test('`canGo` no arrows', t => {
+	const s = new StateMachine({
+		states: [
+			's',
+			'a'
+		],
+		arrows: ['arrow'],
+		transitions: {
+			s: {
+				a: {}
+			}
+		}
+	});
+
+	t.false(s.canGo('arrow', 'a'));
+});
+
 test('`canGo` while transitioning', t => {
 	const forever = new Promise(_.noop);
 
@@ -396,4 +428,39 @@ test('`canGo` while transitioning', t => {
 
 	t.is(s.state(), 'a');
 	t.is(s.isBusy(), true);
+});
+
+test('`canGo` exhaustive', t => {
+	const s = new StateMachine({
+		states: [
+			's',
+			'a',
+			'b',
+			'c'
+		],
+		arrows: ['arrow'],
+		transitions: {
+			s: {
+				a: {
+					arrow: true
+				},
+				c: {
+					arrow: {
+						available: () => false,
+						transition: () => {},
+					}
+				}
+			}
+		}
+	});
+
+	const can = (...args) => t.true(s.canGo(...args));
+	const cant = (...args) => t.false(s.canGo(...args));
+	const throws = (...args) => t.throws(() => s.canGo(...args));
+
+	throws('arrow', 'u');
+	throws('u', 'a');
+	can('arrow', 'a');
+	cant('arrow', 'b');
+	cant('arrow', 'c');
 });
