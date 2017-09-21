@@ -464,3 +464,21 @@ test('`canGo` exhaustive', t => {
 	cant('arrow', 'b');
 	cant('arrow', 'c');
 });
+
+test('arrow does not go from current state to target state', t => {
+	const s = new StateMachine({
+		states: ['a', 'b'],
+		arrows: ['arrow1', 'arrow2'],
+		transitions: {
+			a: {
+				b: {
+					arrow2: true
+				}
+			}
+		}
+	});
+
+	t.true(s.canGo('arrow2', 'b'));
+	t.false(s.canGo('arrow1', 'b'));
+	t.throws(() => s.go('arrow1', 'b'), ArrowNotAvailableError);
+});

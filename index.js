@@ -167,6 +167,22 @@ class StateMachine {
 
 		const arrow = definedArrows && definedArrows[targetArrow];
 
+		if (!arrow) {
+			throw new ArrowNotAvailableError([
+				'Arrow `',
+				targetArrow,
+				'` does not point from `',
+				currentState,
+				'` to `',
+				targetState,
+				'`'
+			], {
+				targetArrow,
+				currentState,
+				targetState
+			});
+		}
+
 		const isAvailable = !arrow.available || arrow.available(...args);
 		if (!isAvailable) {
 			throw new ArrowNotAvailableError('Arrow was not available', {
