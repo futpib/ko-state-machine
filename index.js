@@ -120,11 +120,11 @@ class StateMachine {
 			} = currentTransition;
 
 			throw new ConcurrentTransitionError([
-				'Attempted transition to`',
+				'Attempted transition to `',
 				targetState,
 				'` via `',
 				targetArrow,
-				'` while already transitioning to`',
+				'` while already transitioning to `',
 				currentTargetState,
 				'` via `',
 				currentTargetArrow,
@@ -142,7 +142,7 @@ class StateMachine {
 
 		if (!definedTargetStates || _.isEmpty(definedTargetStates)) {
 			throw new NoArrowsError([
-				'No states are defined to be reachable from`',
+				'No states are defined to be reachable from `',
 				currentState,
 				'`'
 			], {
@@ -154,7 +154,7 @@ class StateMachine {
 
 		if (!definedArrows || _.isEmpty(definedArrows)) {
 			throw new NoArrowsError([
-				'No arrows defined from`',
+				'No arrows defined from `',
 				currentState,
 				'` to `',
 				targetState,
